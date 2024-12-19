@@ -4,228 +4,360 @@
 <head>
     <meta charset="UTF-8">
     <title>Sensor Data Visualizer</title>
-    <!-- Gunakan versi Chart.js UMD -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/4.1.0/cdn.min.js"
-        integrity="sha512-bz58Sg3BAWMEMPTH0B8+pK/+5Qfqq6b2Ho2G4ld12x4fiUVqpY8jSbN/73qpBQYFLU4QnKVL5knUm4uqcJGLVw=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="icon" href="favicon.ico" />
     <style>
-        /* CSS untuk gaya loading spinner */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 60vh;
+            margin-top: 20px;
+        }
+
         #loading {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
             display: none;
+            z-index: 1000;
         }
 
-        /* Indikator spinner loading */
         .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            border: 4px solid rgba(0, 0, 0, 0.1);
             border-top: 4px solid #3498db;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 
 <body>
-
-    <!-- Form Input untuk BASE_URL, API_KEY, dan Page Size -->
-    <div>
-        <label for="baseUrl">Base URL:</label>
-        <input type="text" id="baseUrl" placeholder="Masukkan Base URL">
-
-        <label for="apiKey">API Key:</label>
-        <input type="text" id="apiKey" placeholder="Masukkan API Key">
-
-        <label for="pageSize">Page Size:</label>
-        <input type="number" id="pageSize" placeholder="Masukkan Page Size" min="1" value="1000">
-
-        <button onclick="fetchMeasurements('3h')">3 Jam Terakhir</button>
-        <button onclick="fetchMeasurements('12h')">12 Jam Terakhir</button>
-        <button onclick="fetchMeasurements('3d')">3 Hari Terakhir</button>
-        <button onclick="fetchMeasurements('7d')">7 Hari Terakhir</button>
+    <div class="controls">
+        <div class="input-group">
+            <div class="input-field">
+                <label for="baseUrl">Base URL:</label>
+                <input type="text" id="baseUrl" placeholder="Enter Base URL">
+            </div>
+            <div class="input-field">
+                <label for="apiKey">API Key:</label>
+                <input type="text" id="apiKey" placeholder="Enter API Key">
+            </div>
+            <div class="input-field">
+                <label for="stationId">Station ID:</label>
+                <input type="text" id="stationId" placeholder="Enter Station ID">
+            </div>
+            <div class="input-field">
+                <label for="date">Date:</label>
+                <input type="date" id="date">
+            </div>
+            <div class="input-field">
+                <label for="pageSize">Page Size:</label>
+                <input type="number" id="pageSize" placeholder="Enter Page Size" min="1" value="10">
+            </div>
+        </div>
+        <div class="button-group">
+            <button onclick="fetchMeasurements()">Fetch Measurements</button>
+        </div>
     </div>
 
-    <!-- Elemen Canvas untuk Chart -->
-    <canvas id="aqmsChart"></canvas>
+    <div class="stats" id="statsContainer">
+        <!-- Statistics will be dynamically inserted here -->
+    </div>
 
-    <!-- Indikator Loading -->
+    <div class="chart-container">
+        <canvas id="aqmsChart"></canvas>
+    </div>
+
     <div id="loading">
         <div class="spinner"></div>
-        <p>Loading...</p>
+        <p>Loading data...</p>
     </div>
 
     <script>
-        let chart = null; // Variabel global untuk menyimpan chart
+        let chart = null;
 
-        /**
-         * Fungsi untuk memformat tanggal dengan mikrodetik.
-         * @param {Date} date - Objek Date yang akan diformat.
-         * @returns {string} - String tanggal dalam format ISO dengan mikrodetik.
-         */
-        function formatDateWithMicroseconds(date) {
-            const pad = (n) => n.toString().padStart(2, '0');
-            const padMicro = (n) => n.toString().padStart(6, '0');
-
+        // Format the date to YYYY-MM-DD
+        function formatDateToYYYYMMDD(date) {
             const year = date.getFullYear();
-            const month = pad(date.getMonth() + 1);
-            const day = pad(date.getDate());
-            const hours = pad(date.getHours());
-            const minutes = pad(date.getMinutes());
-            const seconds = pad(date.getSeconds());
-            const microseconds = padMicro(Math.floor(Math.random() * 1000000));
-
-            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${microseconds}Z`;
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
-        /**
-         * Menghitung rentang tanggal berdasarkan filter waktu.
-         * @param {string} timeFilter - Filter waktu (misalnya: '3h', '12h', '3d', '7d').
-         * @returns {Object} - Objek dengan start_date dan end_date.
-         */
-        function calculateDateRange(timeFilter) {
-            const now = new Date();
-            let startDate;
-
-            switch (timeFilter) {
-                case '3h':
-                    startDate = dateFns.subHours(now, 3);
-                    break;
-                case '12h':
-                    startDate = dateFns.subHours(now, 12);
-                    break;
-                case '3d':
-                    startDate = dateFns.subDays(now, 3);
-                    break;
-                case '7d':
-                    startDate = dateFns.subDays(now, 7);
-                    break;
-                default:
-                    startDate = dateFns.subHours(now, 3);
-            }
-
-            return {
-                start_date: formatDateWithMicroseconds(startDate),
-                end_date: formatDateWithMicroseconds(now)
-            };
-        }
-
-        /**
-         * Mengambil data pengukuran dari API dan menampilkan chart.
-         * @param {string} timeFilter - Filter waktu untuk rentang pengukuran.
-         */
-        async function fetchMeasurements(timeFilter) {
+        async function fetchMeasurements() {
             const baseUrl = document.getElementById('baseUrl').value;
             const apiKey = document.getElementById('apiKey').value;
-            const pageSize = document.getElementById('pageSize').value;
+            const stationId = document.getElementById('stationId').value;
+            const date = document.getElementById('date').value;
+            const pageSize = document.getElementById('pageSize').value || 10; // Default to 10 if no input is given
 
-            if (!baseUrl || !apiKey || !pageSize) {
-                alert('Harap masukkan Base URL, API Key, dan Page Size.');
+            // Validation
+            if (!baseUrl || !apiKey || !stationId) {
+                alert('Please fill in the base URL, API Key, and Station ID.');
                 return;
             }
 
-            console.log(`Filter dipilih: ${timeFilter}`);
+            // Parse and validate date
+            let selectedDate = date ? new Date(date) : null;
 
-            const { start_date, end_date } = calculateDateRange(timeFilter);
-            console.log(`Start Date: ${start_date}, End Date: ${end_date}`);
+            if (date && !selectedDate) {
+                alert('Invalid Date');
+                return;
+            }
 
-            let allMeasurements = [];
-            let page = 1;
-            let hasMore = true;
+            // Format the date for URL parameters
+            const formattedDate = selectedDate ? formatDateToYYYYMMDD(selectedDate) : null;
 
-            // Tampilkan indikator loading
+            let allMeasurements = []; // Store all results
+            let nextUrl = `${baseUrl}/v1/stations/measurements/`; // Start with the base URL for the first request
+
             document.getElementById('loading').style.display = 'block';
 
             try {
-                while (hasMore) {
-                    const url = new URL(`${baseUrl}/v1/stations/measurements/`);
-                    url.searchParams.set('start_date', start_date);
-                    url.searchParams.set('end_date', end_date);
-                    url.searchParams.set('page_size', pageSize);
-                    url.searchParams.set('page', page);
+                // Loop to fetch data until there is no 'next' URL
+                do {
+                    const currentUrl = nextUrl; // Use the current URL (initially base URL, then next URL)
 
-                    console.log(`Fetching from URL: ${url.toString()}`);
+                    // Add parameters to the URL
+                    let url = new URL(currentUrl);
+                    if (formattedDate) url.searchParams.set('date', formattedDate);
+                    url.searchParams.set('station_id', stationId);
+                    url.searchParams.set('page_size', pageSize); // Add page_size as a parameter
+
+                    // Send the request to the API
                     const response = await fetch(url.toString(), {
-                        method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${apiKey}`,
                             'Content-Type': 'application/json',
-                        },
-                        mode: 'cors'
+                        }
                     });
 
                     if (!response.ok) {
                         const errorText = await response.text();
-                        console.error('Response error:', errorText);
+                        console.error('API Error Response:', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            errorBody: errorText
+                        });
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
-                    const pageData = await response.json();
-                    allMeasurements = allMeasurements.concat(pageData.results);
+                    // Parse the JSON response
+                    const data = await response.json();
+                    console.log(data);
 
-                    // Check if there are more pages
-                    hasMore = pageData.next !== null;
-                    page++;
+                    if (data.results && data.results.length > 0) {
+                        allMeasurements = allMeasurements.concat(data.results); // Concatenate new results
+                    } else {
+                        console.warn('No measurements found for this page.');
+                    }
+
+                    // Check for a 'next' field to continue pagination
+                    if (data.next) {
+                        // If 'next' is an absolute URL, use it directly, otherwise append it to the base URL
+                        if (data.next.startsWith('http')) {
+                            nextUrl = data.next; // Directly use the full URL
+                        } else {
+                            nextUrl = new URL(data.next, baseUrl).toString(); // Construct the full URL
+                        }
+                    } else {
+                        nextUrl = null; // No more pages, exit the loop
+                    }
+
+                } while (nextUrl); // Continue looping as long as the 'next' URL exists
+
+                // Once all data is fetched, update visualization
+                if (allMeasurements.length > 0) {
+                    updateVisualization(allMeasurements);
+                } else {
+                    alert('No measurements found.');
                 }
 
-                console.log('All Measurements:', allMeasurements);
-
-                // Hapus indikator loading setelah data selesai di-fetch
-                document.getElementById('loading').style.display = 'none';
-
-                createChart(allMeasurements);
-
             } catch (error) {
-                console.error('Error fetching measurements:', error);
+                console.error('Error in fetchMeasurements:', error);
+                alert('Error fetching data. Please check console for details.');
+            } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
-        /**
-         * Membuat atau memperbarui chart berdasarkan data pengukuran.
-         * @param {Array} measurements - Data pengukuran yang diambil dari API.
-         */
+        function updateVisualization(measurements) {
+            updateStats(measurements);
+            createChart(measurements);
+        }
+
+        function updateStats(measurements) {
+            const stats = calculateStats(measurements);
+
+            const container = document.getElementById('statsContainer');
+            if (!container) {
+                console.error("Stats container not found");
+                return;
+            }
+
+            const parameterName = measurements[0]?.parameter || 'Measurement';
+            const unit = measurements[0]?.unit || '';
+
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalReadings}</div>
+                    <div class="stat-label">Total Data</div>
+                </div>
+            `;
+        }
+
+        function calculateStats(measurements) {
+            const values = measurements.map(m => m.value);
+            return {
+                totalReadings: measurements.length,
+            };
+        }
+
         function createChart(measurements) {
-            // Hancurkan chart sebelumnya jika ada
             if (chart) {
                 chart.destroy();
             }
 
-            const timestamps = measurements.map(item => new Date(item.timestamp));
-            const values = measurements.map(item => item.value);
-
             const ctx = document.getElementById('aqmsChart').getContext('2d');
+
+            const data = measurements.map(m => ({
+                x: new Date(m.timestamp),
+                y: m.value
+            }));
+
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: timestamps,
                     datasets: [{
-                        label: 'Measurement Value',
-                        data: values,
-                        borderColor: 'blue',
-                        fill: false
+                        label: `Unit`,
+                        data: data,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 1,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         x: {
                             type: 'time',
                             time: {
-                                unit: 'hour'
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM d, HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Value'
                             }
                         }
                     }
@@ -233,6 +365,7 @@
             });
         }
     </script>
+
 </body>
 
 </html>
